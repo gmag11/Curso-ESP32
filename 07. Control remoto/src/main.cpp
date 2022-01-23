@@ -52,6 +52,12 @@ void setup () {
         response += ": LED OFF";
         request->send (200, "text/plain", response);
                });
+    server.on ("/led", HTTP_GET, [] (AsyncWebServerRequest* request) {
+        String response = NTP.getTimeDateStringForJS ();
+        response += ": LED is";
+        response += (digitalRead (LED) == LED_ON) ? " ON" : " OFF";
+        request->send (200, "text/plain", response);
+               });
     server.onNotFound (notFound);
     server.begin ();
 
