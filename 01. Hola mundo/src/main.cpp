@@ -1,6 +1,6 @@
 #include <Arduino.h>
 
-constexpr auto LED = 5;
+constexpr auto LED = 10;
 
 void setup () {
     Serial.begin(9600);
@@ -8,7 +8,7 @@ void setup () {
 }
 
 void loop () {
-    Serial.println("¡Hola Mundo!");
+    Serial.printf("¡Hola Mundo!\n");
     digitalWrite (LED, HIGH);
     delay (1000);
     digitalWrite (LED, LOW);
