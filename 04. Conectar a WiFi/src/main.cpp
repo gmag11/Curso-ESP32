@@ -1,6 +1,5 @@
 #include <Arduino.h>
 #include <WiFi.h>
-#include <ESPNtpClient.h>
 
 #if __has_include("wificonfig.h")
 #include "wificonfig.h"
@@ -10,8 +9,8 @@ constexpr auto PASSWORD = "PASSWORD";
 #endif
 
 // constexpr auto LED = 5;
-constexpr auto LED = 19;
-constexpr auto LED_ON = HIGH;
+constexpr auto LED = 10;
+constexpr auto LED_ON = LOW;
 
 TaskHandle_t tareaLED = NULL;
 TaskHandle_t tareaMensaje = NULL;
@@ -34,14 +33,8 @@ void parpadeaLED (void* pvParameters) {
         time_t start = millis (); // toma la referencia del inicio
 
         //--------------------- Procesado visual -------------------------------------------
-        time_t ciclo;
-
-        if (NTP.syncStatus () == syncd) {
-            ciclo = NTP.millis () % periodoLED;;
-        } else {
-            ciclo = millis () % periodoLED;
-        }
-
+        time_t ciclo = millis () % periodoLED;
+        
         if ((ciclo > 0 && ciclo < ledEncendido) || (ciclo > ledEncendido + ledApagado && ciclo < ledEncendido * 2 + ledApagado)) {
             digitalWrite (LED, LED_ON);
         } else {
@@ -62,7 +55,7 @@ void escribeMensaje (void* pvParameters) {
 }
 
 void setup () {
-    Serial.begin (9600);
+    Serial.begin (115200);
     pinMode (LED, OUTPUT);
     digitalWrite (LED, !LED_ON);
     WiFi.mode (WIFI_STA);
