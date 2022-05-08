@@ -1,6 +1,6 @@
 #include <Arduino.h>
 
-constexpr auto LED = 5;
+constexpr auto LED = 10;
 
 TaskHandle_t tareaLED = NULL;
 TaskHandle_t tareaMensaje = NULL;
@@ -38,13 +38,13 @@ void parpadeaLED (void* pvParameters) {
 
 void escribeMensaje (void* pvParameters) {
     for (;;) {
-        Serial.println ("Hola mundo");
+        log_printf ("Hola mundo");
         delay (esperaMensaje);
     }
 }
 
 void setup () {
-    Serial.begin (9600);
+    Serial.begin (115200);
     pinMode (LED, OUTPUT);
     xTaskCreate (parpadeaLED, "LED", configMINIMAL_STACK_SIZE, NULL, 1, &tareaLED);
     xTaskCreate (escribeMensaje, "Mensaje", configMINIMAL_STACK_SIZE, NULL, 1, &tareaMensaje);
