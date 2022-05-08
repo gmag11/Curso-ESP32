@@ -31,6 +31,7 @@ void setup () {
     Serial.begin (115200);
     M5.begin ();
     pinMode (LED, OUTPUT);
+    M5.Lcd.setRotation (3);
     M5.Lcd.fillScreen (BLACK);
     delay (100);
     xTaskCreate (parpadeaLED, "LED", configMINIMAL_STACK_SIZE, NULL, 1, &tareaLED);
@@ -39,7 +40,6 @@ void setup () {
 
 void updateDisplay () {
     M5.Lcd.fillScreen (BLACK);
-    M5.Lcd.setRotation (3);
     M5.Lcd.setCursor (10, 10);
     M5.Lcd.setTextColor (WHITE);
     M5.Lcd.setTextSize (7);
@@ -47,6 +47,11 @@ void updateDisplay () {
     uint minutes = seconds / 60;
     seconds = seconds % 60;
     M5.Lcd.printf ("%02d:%02d", minutes, seconds, counter);
+    M5.Lcd.setCursor (10, 65);
+    M5.Lcd.setTextSize (3);
+    M5.Lcd.printf ("%.2f V", M5.Axp.GetBatVoltage ());
+    M5.Lcd.setCursor (10, 90);
+    M5.Lcd.printf ("%.2f mA", M5.Axp.GetBatCurrent ());
 }
 
 void loop () {
