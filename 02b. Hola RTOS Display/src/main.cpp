@@ -1,8 +1,6 @@
 #include <Arduino.h>
 #include <M5StickCPlus.h>
 
-constexpr auto LED = 10;
-
 TaskHandle_t tareaLED = NULL;
 TaskHandle_t tareaMensaje = NULL;
 
@@ -13,9 +11,9 @@ bool sendMessage = false;
 
 void parpadeaLED (void* pvParameters) {
     for (;;)   {
-        digitalWrite (LED, HIGH);
+        digitalWrite (BUILTIN_LED, HIGH);
         delay (esperaLED);
-        digitalWrite (LED, LOW);
+        digitalWrite (BUILTIN_LED, LOW);
         delay (esperaLED);
     }
 }
@@ -30,7 +28,7 @@ void escribeMensaje (void* pvParameters) {
 void setup () {
     Serial.begin (115200);
     M5.begin ();
-    pinMode (LED, OUTPUT);
+    pinMode (BUILTIN_LED, OUTPUT);
     M5.Lcd.setRotation (3);
     M5.Lcd.fillScreen (BLACK);
     delay (100);
