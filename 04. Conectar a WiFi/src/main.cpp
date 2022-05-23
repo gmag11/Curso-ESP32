@@ -71,7 +71,6 @@ void updateDisplay (void* pvParameters) {
         if (millis () - lastDisplayUpdate >= periodoDisplay) {
             lastDisplayUpdate = millis ();
             Disbuff.fillSprite (BLUE);
-            Disbuff.setCursor (10, 65);
             Disbuff.setTextColor (WHITE);
             uint seconds = millis () / 1000;
             uint minutes = seconds / 60;
