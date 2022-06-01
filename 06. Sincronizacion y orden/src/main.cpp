@@ -74,7 +74,7 @@ void parpadeaLED (void* pvParameters) {
         time_t ciclo;
         static bool flashed = false;
 
-        if (NTP.syncStatus () == syncd) {
+        if (NTP.syncStatus () >= syncd) {
             ciclo = NTP.millis () % ledCyclePeriod;;
         } else {
             ciclo = millis () % ledCyclePeriod;
