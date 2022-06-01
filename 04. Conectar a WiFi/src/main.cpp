@@ -56,8 +56,10 @@ void updateDisplay (void* pvParameters) {
         Disbuff.printf ("%02d:%02d.%02d", minutes, seconds, cents);
         Disbuff.setCursor (10, 50);
         Disbuff.setTextSize (2);
+        Disbuff.setTextColor (RED);
         Disbuff.printf ("%.2f V %.2f mA", voltage, current);
         Disbuff.setCursor (10, 75);
+        Disbuff.setTextColor (WHITE);
         Disbuff.printf ("%s", ssid.c_str ());
         Disbuff.setCursor (10, 100);
         Disbuff.printf ("IP: %s", localip.c_str ());
@@ -85,7 +87,6 @@ void parpadeaLED (void* pvParameters) {
             }
         }
         delay (10);
-    }
     }
 }
 
