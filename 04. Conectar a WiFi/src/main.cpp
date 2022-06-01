@@ -15,20 +15,7 @@ constexpr auto LED_ON = LOW;
 
 TaskHandle_t tareaLED = NULL;
 TaskHandle_t tareaMensaje = NULL;
-TaskHandle_t tareaPantalla = NULL;
-
-constexpr auto periodoLED = 1000;
-constexpr auto ledEncendido = 50; // ms
-constexpr auto ledApagado = 150; // ms
-
-constexpr auto esperaMensaje = 10000;
-
-constexpr auto framerate = 20;
-constexpr auto frametime = 1000 / framerate;
-
-constexpr auto periodoDisplay = 1000;
-constexpr auto framerateDisplay = 15;
-constexpr auto frametimeDisplay = 1000 / framerateDisplay;
+TimerHandle_t tareaDisplay = NULL;
 
 /*
     El LED se enciende durante 10 ms dos veces, con otros 10 ms de espera entre cada uno. Se repite cada 1 segundo
@@ -36,58 +23,79 @@ constexpr auto frametimeDisplay = 1000 / framerateDisplay;
 
 TFT_eSprite Disbuff = TFT_eSprite (&M5.Lcd);
 
-void parpadeaLED (void* pvParameters) {
-    for (;;) {
-        time_t start = millis (); // toma la referencia del inicio
+void updateDisplay (void* pvParameters) {
+    constexpr auto periodoDisplay = 10;
+
+    static time_t lastDisplayUpdate = 0;
+    static time_t lastMeasurement = 0;
+    static float current;
+    static float voltage;
+    static String ssid;
+    static String localip;
+
+    if (millis () - lastMeasurement > 1000) {
+        lastMeasurement = millis ();
+        current = M5.Axp.GetBatCurrent ();
+        voltage = M5.Axp.GetBatVoltage ();
+        ssid = WiFi.SSID ();
+        localip = WiFi.localIP ().toString ();
+    }
 
         //--------------------- Procesado visual -------------------------------------------
-        time_t ciclo = millis () % periodoLED;
-        
-        if ((ciclo > 0 && ciclo < ledEncendido) || (ciclo > ledEncendido + ledApagado && ciclo < ledEncendido * 2 + ledApagado)) {
-            digitalWrite (LED, LED_ON);
-        } else {
-            digitalWrite (LED, !LED_ON);
+    if (millis () - lastDisplayUpdate >= periodoDisplay) {
+        lastDisplayUpdate = millis ();
+        Disbuff.fillSprite (BLACK);
+        Disbuff.setCursor (10, 10);
+        Disbuff.setTextColor (WHITE);
+        Disbuff.setTextSize (4);
+        time_t currentTime = millis ();
+        uint cents = (currentTime % 1000) / 10;
+        uint seconds = currentTime / 1000;
+        uint minutes = seconds / 60;
+        seconds = seconds % 60;
+        Disbuff.printf ("%02d:%02d.%02d", minutes, seconds, cents);
+        Disbuff.setCursor (10, 50);
+        Disbuff.setTextSize (2);
+        Disbuff.printf ("%.2f V %.2f mA", voltage, current);
+        Disbuff.setCursor (10, 75);
+        Disbuff.printf ("%s", ssid.c_str ());
+        Disbuff.setCursor (10, 100);
+        Disbuff.printf ("IP: %s", localip.c_str ());
+        Disbuff.pushSprite (0, 0);
+    }
+    //----------------------------------------------------------------------------------
+}
+
+void parpadeaLED (void* pvParameters) {
+    const int letFlashes = 2;
+    const int ledONtime = 40;
+    const int ledOFFtime = 100;
+    const int ledCyclePeriod = 1000;
+
+    static time_t lastLEDCycle = 0;
+
+    for (;;) {
+        if (millis () - lastLEDCycle > ledCyclePeriod) {
+            lastLEDCycle = millis ();
+            for (int i = 0; i < letFlashes; i++) {
+                digitalWrite (LED, LED_ON);
+                delay (ledONtime);
+                digitalWrite (LED, !LED_ON);
+                delay (ledOFFtime);
+            }
         }
-        //----------------------------------------------------------------------------------
-        
-        delay (frametime - (millis () - start)); // Esperar el tiempo necesario para 40 fps
+        delay (10);
+    }
     }
 }
 
 void escribeMensaje (void* pvParameters) {
+    constexpr auto esperaMensaje = 10000;
+
     for (;;) {
         log_printf ("\nHola mundo. Ya estoy en Internet\n");
         log_printf ("Mi IP es %s\n", WiFi.localIP ().toString ().c_str ());
         delay (esperaMensaje);
-    }
-}
-
-void updateDisplay (void* pvParameters) {
-    for (;;) {
-        time_t start = millis (); // toma la referencia del inicio
-        static time_t lastDisplayUpdate = 0;
-
-        //--------------------- Procesado visual -------------------------------------------
-        if (millis () - lastDisplayUpdate >= periodoDisplay) {
-            lastDisplayUpdate = millis ();
-            Disbuff.fillSprite (BLUE);
-            Disbuff.setTextColor (WHITE);
-            uint seconds = millis () / 1000;
-            uint minutes = seconds / 60;
-            seconds = seconds % 60;
-            Disbuff.setTextSize (7);
-            Disbuff.setCursor (10, 10);
-            Disbuff.printf ("%02d:%02d", minutes, seconds);
-            Disbuff.setTextSize (2);
-            Disbuff.setCursor (10, 65);
-            Disbuff.printf ("%s", WiFi.SSID ().c_str ());
-            Disbuff.setCursor (10, 90);
-            Disbuff.setTextSize (2);
-            Disbuff.printf ("IP: %s", WiFi.localIP ().toString ().c_str ());
-            Disbuff.pushSprite (0, 0);
-        }
-        //----------------------------------------------------------------------------------
-        vTaskDelay (frametimeDisplay - (millis () - start) / portTICK_PERIOD_MS); // Esperar el tiempo necesario para cumplir fps
     }
 }
 
@@ -97,12 +105,12 @@ void setup () {
     digitalWrite (LED, !LED_ON);
     WiFi.mode (WIFI_STA);
     WiFi.begin (SSID, PASSWORD);
-    
+
     M5.begin ();
     M5.Lcd.setRotation (3);
     Disbuff.createSprite (240, 135);
     Disbuff.setRotation (3);
-    Disbuff.fillSprite (BLUE);
+    Disbuff.fillSprite (BLACK);
     Disbuff.setTextColor (WHITE);
     Disbuff.setTextSize (2);
     Disbuff.setCursor (10, 10);
@@ -114,11 +122,13 @@ void setup () {
         delay (100);
         Serial.print (".");
     }
-    
-    xTaskCreate (parpadeaLED, "LED", configMINIMAL_STACK_SIZE, NULL, 1, &tareaLED);
+
     xTaskCreate (escribeMensaje, "Mensaje", 2048, NULL, 1, &tareaMensaje);
-    xTaskCreate (updateDisplay, "Pantalla", 2048, NULL, 1, &tareaPantalla);
+
+    xTaskCreate (parpadeaLED, "LED", configMINIMAL_STACK_SIZE, NULL, 1, &tareaLED);
+
+    tareaDisplay = xTimerCreate ("Display", 40 / portTICK_PERIOD_MS, pdTRUE, NULL, updateDisplay);
+    xTimerStart (tareaDisplay, 0);
 }
 
-void loop () {
-}
+void loop () {}
