@@ -9,33 +9,6 @@ constexpr auto esperaMensaje = 1000;
 int counter = 0;
 bool sendMessage = false;
 
-void parpadeaLED (void* pvParameters) {
-    for (;;)   {
-        digitalWrite (BUILTIN_LED, HIGH);
-        delay (esperaLED);
-        digitalWrite (BUILTIN_LED, LOW);
-        delay (esperaLED);
-    }
-}
-
-void escribeMensaje (void* pvParameters) {
-    for (;;) {
-        sendMessage = true;
-        delay (esperaMensaje);
-    }
-}
-
-void setup () {
-    Serial.begin (115200);
-    M5.begin ();
-    pinMode (BUILTIN_LED, OUTPUT);
-    M5.Lcd.setRotation (3);
-    M5.Lcd.fillScreen (BLACK);
-    delay (100);
-    xTaskCreate (parpadeaLED, "LED", configMINIMAL_STACK_SIZE, NULL, 1, &tareaLED);
-    xTaskCreate (escribeMensaje, "Mensaje", configMINIMAL_STACK_SIZE, NULL, 1, &tareaMensaje);
-}
-
 void updateDisplay () {
     M5.Lcd.fillScreen (BLACK);
     M5.Lcd.setCursor (10, 10);
@@ -52,11 +25,36 @@ void updateDisplay () {
     M5.Lcd.printf ("%.2f mA", M5.Axp.GetBatCurrent ());
 }
 
-void loop () {
-    if (sendMessage) {
-        sendMessage = false;
-        //Serial.printf ("Hola mundo: %d\n", counter);
-        updateDisplay ();
-        //counter++;
+void parpadeaLED (void* pvParameters) {
+    for (;;)   {
+        digitalWrite (BUILTIN_LED, HIGH);
+        delay (esperaLED);
+        digitalWrite (BUILTIN_LED, LOW);
+        delay (esperaLED);
     }
+}
+
+void escribeMensaje (void* pvParameters) {
+    for (;;) {
+        static time_t last = 0;
+        if (millis() - last > esperaMensaje) {
+            last = millis();
+            updateDisplay ();
+        }
+    }
+}
+
+void setup () {
+    Serial.begin (115200);
+    M5.begin ();
+    pinMode (BUILTIN_LED, OUTPUT);
+    M5.Lcd.setRotation (3);
+    M5.Lcd.fillScreen (BLACK);
+    delay (100);
+    xTaskCreate (parpadeaLED, "LED", configMINIMAL_STACK_SIZE, NULL, 1, &tareaLED);
+    xTaskCreate (escribeMensaje, "Mensaje", 2048, NULL, 1, &tareaMensaje);
+}
+
+void loop () {
+   // }
 }

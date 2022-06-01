@@ -11,36 +11,8 @@ bool sendMessage = false;
 
 TFT_eSprite Disbuff = TFT_eSprite (&M5.Lcd);
 
-void parpadeaLED (void* pvParameters) {
-    for (;;)   {
-        digitalWrite (BUILTIN_LED, HIGH);
-        delay (esperaLED);
-        digitalWrite (BUILTIN_LED, LOW);
-        delay (esperaLED);
-    }
-}
-
-void escribeMensaje (void* pvParameters) {
-    for (;;) {
-        sendMessage = true;
-        delay (esperaMensaje);
-    }
-}
-
-void setup () {
-    Serial.begin (115200);
-    M5.begin ();
-    pinMode (BUILTIN_LED, OUTPUT);
-    M5.Lcd.setRotation (3);
-    Disbuff.createSprite (240, 135);
-    Disbuff.setRotation (3);
-    delay (100);
-    xTaskCreate (parpadeaLED, "LED", configMINIMAL_STACK_SIZE, NULL, 1, &tareaLED);
-    xTaskCreate (escribeMensaje, "Mensaje", configMINIMAL_STACK_SIZE, NULL, 1, &tareaMensaje);
-}
-
 void updateDisplay () {
-    Disbuff.fillSprite (BLUE);
+    Disbuff.fillSprite (BLACK);
     Disbuff.setCursor (10, 10);
     Disbuff.setTextColor (WHITE);
     Disbuff.setTextSize (7);
@@ -56,9 +28,37 @@ void updateDisplay () {
     Disbuff.pushSprite (0, 0);
 }
 
-void loop () {
-    if (sendMessage) {
-        sendMessage = false;
-        updateDisplay ();
+
+void parpadeaLED (void* pvParameters) {
+    for (;;)   {
+        digitalWrite (BUILTIN_LED, HIGH);
+        delay (esperaLED);
+        digitalWrite (BUILTIN_LED, LOW);
+        delay (esperaLED);
     }
+}
+
+void escribeMensaje (void* pvParameters) {
+    for (;;) {
+        static time_t last = 0;
+        if (millis () - last > esperaMensaje) {
+            last = millis ();
+            updateDisplay ();
+        }
+    }
+}
+
+void setup () {
+    Serial.begin (115200);
+    M5.begin ();
+    pinMode (BUILTIN_LED, OUTPUT);
+    M5.Lcd.setRotation (3);
+    Disbuff.createSprite (240, 135);
+    Disbuff.setRotation (3);
+    delay (100);
+    xTaskCreate (parpadeaLED, "LED", configMINIMAL_STACK_SIZE, NULL, 1, &tareaLED);
+    xTaskCreate (escribeMensaje, "Mensaje", 2048, NULL, 1, &tareaMensaje);
+}
+
+void loop () {
 }
