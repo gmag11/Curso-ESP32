@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <WiFi.h>
-#include <ESPNtpClient.h>
+//#include <ESPNtpClient.h>
+#include <sntp.h>
 #include <M5StickCPlus.h>
 
 #if __has_include("wificonfig.h")
@@ -17,6 +18,8 @@ constexpr auto LED_ON = LOW;
 TaskHandle_t tareaLED = NULL;
 TaskHandle_t tareaMensaje = NULL;
 TimerHandle_t tareaDisplay = NULL;
+
+bool timeSyncd = false;
 
 TFT_eSprite Disbuff = TFT_eSprite (&M5.Lcd);
 
@@ -74,8 +77,12 @@ void parpadeaLED (void* pvParameters) {
         time_t ciclo;
         static bool flashed = false;
 
-        if (NTP.syncStatus () >= syncd) {
-            ciclo = NTP.millis () % ledCyclePeriod;;
+        struct timeval tv_now;
+        gettimeofday (&tv_now, NULL);
+        time_t time_ms = tv_now.tv_sec * 1000L + tv_now.tv_usec / 1000L;
+
+        if (timeSyncd) {
+            ciclo = time_ms % ledCyclePeriod;;
         } else {
             ciclo = millis () % ledCyclePeriod;
         }
@@ -103,7 +110,7 @@ void escribeMensaje (void* pvParameters) {
     for (;;) {
         log_printf ("\nHola mundo. Ya estoy en Internet\n");
         log_printf ("Mi IP es %s\n", WiFi.localIP ().toString ().c_str ());
-        log_printf ("Sabes qué hora es?... %s\n", NTP.getTimeDateString());
+        //log_printf ("Sabes qué hora es?... %s\n", NTP.getTimeDateString());
 
         delay (esperaMensaje);
     }
@@ -136,11 +143,17 @@ void setup () {
     }
     //WiFi.setAutoReconnect (false);
 
-    NTP.begin ("192.168.5.120", false);
-    NTP.setTimeZone (TZ_Europe_Madrid);
-    NTP.onNTPSyncEvent ([] (NTPEvent_t ntpEvent) {
-        log_printf ("NTP Event: %d: %s\n", ntpEvent, NTP.ntpEvent2str (ntpEvent));
-                        });
+
+    sntp_setoperatingmode (SNTP_OPMODE_POLL);
+    sntp_set_sync_mode (SNTP_SYNC_MODE_SMOOTH);
+    sntp_setservername (0, "192.168.5.120");
+    setenv ("TZ", PSTR ("CET-1CEST,M3.5.0,M10.5.0/3"), 1);
+    tzset ();
+    sntp_set_time_sync_notification_cb ([] (struct timeval* tv) {
+        timeSyncd = true;
+        log_printf ("\nHora sincronizada\n");
+    });
+    sntp_init ();
 
     xTaskCreate (escribeMensaje, "Mensaje", 2048, NULL, 1, &tareaMensaje);
 
