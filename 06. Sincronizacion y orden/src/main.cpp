@@ -1,6 +1,5 @@
 #include <Arduino.h>
 #include <WiFi.h>
-//#include <ESPNtpClient.h>
 #include <sntp.h>
 #include <M5StickCPlus.h>
 

@@ -1,6 +1,6 @@
 #include <Arduino.h>
 #include <WiFi.h>
-#include <ESPNtpClient.h>
+#include <sntp.h>
 
 #include <M5StickCPlus.h>
 
@@ -19,8 +19,9 @@ TaskHandle_t tareaLED = NULL;
 TaskHandle_t tareaMensaje = NULL;
 TimerHandle_t tareaDisplay = NULL;
 
-TFT_eSprite Disbuff = TFT_eSprite (&M5.Lcd);
+bool timeSyncd = false;
 
+TFT_eSprite Disbuff = TFT_eSprite (&M5.Lcd);
 
 void updateDisplay (void* pvParameters) {
     constexpr auto periodoDisplay = 10;
@@ -92,7 +93,7 @@ void escribeMensaje (void* pvParameters) {
     for (;;) {
         log_printf ("\nHola mundo. Ya estoy en Internet\n");
         log_printf ("Mi IP es %s\n", WiFi.localIP ().toString ().c_str ());
-        log_printf ("Sabes qué hora es?... %s\n", NTP.getTimeDateString());
+        //log_printf ("Sabes qué hora es?... %s\n", NTP.getTimeDateString());
 
         delay (esperaMensaje);
     }
@@ -125,11 +126,16 @@ void setup () {
     }
     //WiFi.setAutoReconnect (false);
 
-    NTP.begin ("es.pool.ntp.org", false);
-    NTP.setTimeZone (TZ_Europe_Madrid);
-    NTP.onNTPSyncEvent ([] (NTPEvent_t ntpEvent) {
-        log_printf ("NTP Event: %d: %s\n", ntpEvent, NTP.ntpEvent2str (ntpEvent));
-                        });
+    sntp_setoperatingmode (SNTP_OPMODE_POLL);
+    sntp_set_sync_mode (SNTP_SYNC_MODE_SMOOTH);
+    sntp_setservername (0, "192.168.5.120");
+    setenv ("TZ", PSTR ("CET-1CEST,M3.5.0,M10.5.0/3"), 1);
+    tzset ();
+    sntp_set_time_sync_notification_cb ([] (struct timeval* tv) {
+        timeSyncd = true;
+        log_printf ("\nHora sincronizada\n");
+                                        });
+    sntp_init ();
 
     xTaskCreate (escribeMensaje, "Mensaje", 2048, NULL, 1, &tareaMensaje);
 
