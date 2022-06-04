@@ -109,7 +109,8 @@ void escribeMensaje (void* pvParameters) {
     for (;;) {
         log_printf ("\nHola mundo. Ya estoy en Internet\n");
         log_printf ("Mi IP es %s\n", WiFi.localIP ().toString ().c_str ());
-        //log_printf ("Sabes qué hora es?... %s\n", NTP.getTimeDateString());
+        time_t now = time (NULL);
+        log_printf ("Sabes qué hora es?... %s\n", ctime(&now));
 
         delay (esperaMensaje);
     }
@@ -121,7 +122,6 @@ void setup () {
     digitalWrite (LED, !LED_ON);
 
     WiFi.mode (WIFI_STA);
-    //WiFi.enableLongRange (false);
     WiFi.begin (SSID, PASSWORD);
 
     M5.begin ();
@@ -141,7 +141,6 @@ void setup () {
         Serial.print (".");
     }
     //WiFi.setAutoReconnect (false);
-
 
     sntp_setoperatingmode (SNTP_OPMODE_POLL);
     sntp_set_sync_mode (SNTP_SYNC_MODE_SMOOTH);
