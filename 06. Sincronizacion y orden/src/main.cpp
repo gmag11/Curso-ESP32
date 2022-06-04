@@ -158,7 +158,9 @@ void setup () {
 
     xTaskCreate (parpadeaLED, "LED", 2048, NULL, 1, &tareaLED);
 
-    tareaDisplay = xTimerCreate ("Display", 40 / portTICK_PERIOD_MS, pdTRUE, NULL, updateDisplay);
+    const uint fps = 10;
+
+    tareaDisplay = xTimerCreate ("Display", pdMS_TO_TICKS(1000/fps), pdTRUE, NULL, updateDisplay);
     xTimerStart (tareaDisplay, 0);
 }
 
