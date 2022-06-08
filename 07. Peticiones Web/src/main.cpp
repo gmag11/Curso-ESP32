@@ -26,6 +26,7 @@ float temp = -200;
 
 
 void updateDisplay (void* pvParameters) {
+    RTC_TimeTypeDef sTime;
     constexpr auto periodoDisplay = 10;
 
     static time_t lastDisplayUpdate = 0;
@@ -50,9 +51,8 @@ void updateDisplay (void* pvParameters) {
         Disbuff.setCursor (10, 10);
         Disbuff.setTextColor (WHITE);
         Disbuff.setTextSize (4);
-        time_t hora_actual = time (NULL);
-        tm* hora = localtime (&hora_actual);
-        Disbuff.printf ("%02d:%02d:%02d", hora->tm_hour, hora->tm_min, hora->tm_sec);
+        M5.Rtc.GetTime (&sTime);
+        Disbuff.printf ("%02d:%02d:%02d", sTime.Hours, sTime.Minutes, sTime.Seconds);
         Disbuff.setCursor (10, 50);
         Disbuff.setTextSize (2);
         Disbuff.setTextColor (RED);
@@ -70,6 +70,29 @@ void updateDisplay (void* pvParameters) {
         Disbuff.pushSprite (0, 0);
     }
     //----------------------------------------------------------------------------------
+}
+
+void time_sync_cb (timeval* ntptime) {
+    time_t hora_actual = time (NULL);
+
+    tm* timeinfo = localtime (&hora_actual);
+    RTC_DateTypeDef sDate;
+    RTC_TimeTypeDef sTime;
+
+    sTime.Hours = timeinfo->tm_hour;
+    sTime.Minutes = timeinfo->tm_min;
+    sTime.Seconds = timeinfo->tm_sec;
+
+    M5.Rtc.SetTime (&sTime);
+
+    sDate.WeekDay = timeinfo->tm_wday;
+    sDate.Month = timeinfo->tm_mon + 1;
+    sDate.Date = timeinfo->tm_mday;
+    sDate.Year = timeinfo->tm_year + 1900;
+
+    M5.Rtc.SetData (&sDate);
+
+    timeSyncd = true;
 }
 
 void setup () {
@@ -105,10 +128,7 @@ void setup () {
     sntp_setservername (0, "192.168.5.120");
     setenv ("TZ", PSTR ("CET-1CEST,M3.5.0,M10.5.0/3"), 1);
     tzset ();
-    sntp_set_time_sync_notification_cb ([] (struct timeval* tv) {
-        timeSyncd = true;
-        log_printf ("\nHora sincronizada\n");
-    });
+    sntp_set_time_sync_notification_cb (time_sync_cb);
     sntp_init ();
 
     const uint fps = 10;
