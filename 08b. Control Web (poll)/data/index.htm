@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title id="title">Home</title>
+    <link rel="stylesheet" type="text/css" href="style.css">
+    <!-- <script src="../js/jquery-3.3.1.min.js"></script> -->
+</head>
+<!-- a toggle button -->
+
+<body onload=checkLed()>
+    <!-- Rounded switch -->
+    <label class="switch">
+        <input type="checkbox" id="led" onclick=setLed()>
+        <span class="slider round"></span>
+    </label>
+
+</html>
+
+<script>
+    function setLed() {
+        var xmlHttp = new XMLHttpRequest();
+        var url = location.protocol + "//" + location.hostname + ":" + location.port;
+
+        var checkBox = document.getElementById("led");
+        if (checkBox.checked == true) {
+            xmlHttp.open("GET", url + "/ledon");
+            xmlHttp.send();
+            xmlHttp.onload = function() {
+                if (xmlHttp.status == 200) {
+                    console.log("LED is on");
+                } else {
+                    console.log("Error sending led request");
+                }
+            }
+        } else {
+            xmlHttp.open("GET", url + "/ledoff");
+            xmlHttp.send();
+            xmlHttp.onload = function () {
+                if (xmlHttp.status == 200) {
+                    console.log("LED is off");
+                } else {
+                    console.log("Error sending led request");
+                }
+            }
+        }
+    }
+
+    function checkLed() {
+        console.log("Checking LED");
+        var xmlHttp = new XMLHttpRequest();
+        var url = location.protocol + "//" + location.hostname + ":" + location.port;
+        xmlHttp.open("GET", url + "/led");
+        xmlHttp.send();
+        xmlHttp.onload = function() {
+            if (xmlHttp.status == 200) {
+                if (xmlHttp.responseText == "1") {
+                    document.getElementById("led").checked = true;
+                    console.log("LED is on");
+                } else {
+                    document.getElementById("led").checked = false;
+                    console.log("LED is off");
+                }
+            } else {
+                console.log("Error sending led request");
+            }
+        }
+    }
+
+    var intervalId = setInterval(checkLed, 1000);
+</script>
