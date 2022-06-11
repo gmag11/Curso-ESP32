@@ -23,7 +23,7 @@ TimerHandle_t tareaDisplay = NULL;
 bool timeSyncd = false;
 
 bool ledOn = false;
-bool ledChanged = true;
+bool ledChanged = false;
 
 AsyncWebServer server (80);
 AsyncWebSocket ws ("/ws");
@@ -52,7 +52,7 @@ bool readConfigFromFlash () {
                         led.trim ();
                         Serial.printf ("LED substring: *%s*\n", led.c_str ());
                         ledOn = led == "1";
-                        
+                        ledChanged = true;
                         Serial.printf ("LED=%d\n", ledOn);
                         return true;
                     } else {
@@ -83,7 +83,6 @@ bool saveConfigToFlash () {
             Serial.println ("Config file opened");
             configFile.print ("LED=");
             configFile.println (ledOn ? "1" : "0");
-            ledChanged = true;
             configFile.close ();
             return true;
         }
