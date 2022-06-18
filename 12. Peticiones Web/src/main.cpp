@@ -3,6 +3,7 @@
 #include <sntp.h>
 #include <M5StickCPlus.h>
 #include <HTTPClient.h>
+#include <QuickDebug.h>
 
 #if __has_include("wificonfig.h")
 #include "wificonfig.h"
@@ -24,6 +25,13 @@ bool timeSyncd = false;
 TFT_eSprite Disbuff = TFT_eSprite (&M5.Lcd);
 float temp = -200;
 
+float rate = 0;
+bool ticker = false;
+const String COIN = "ethereum";
+const char* COINSHRT = "ETH";
+const String FIAT = "usd";
+
+const char* TAG = "WEBCLIENT";
 
 void updateDisplay (void* pvParameters) {
     RTC_TimeTypeDef sTime;
@@ -59,12 +67,18 @@ void updateDisplay (void* pvParameters) {
         Disbuff.printf ("%.2f V %.2f mA", voltage, current);
         Disbuff.setCursor (10, 75);
         Disbuff.setTextSize (4);
-        if (temp > -100) {
-            Disbuff.setTextColor (GREEN);
-            Disbuff.printf ("T:%.2f C", temp);
+        if (ticker) {
+            if (temp > -100) {
+                Disbuff.setTextColor (GREEN);
+                Disbuff.printf ("T:%.2f C", temp);
+            } else {
+                Disbuff.setTextColor (RED);
+                Disbuff.printf ("T:--.-- C");
+            }
         } else {
-            Disbuff.setTextColor (RED);
-            Disbuff.printf ("T:--.-- C");
+            Disbuff.setTextColor (YELLOW);
+            Disbuff.setTextSize (3);
+            Disbuff.printf ("%s:%0.2f", COINSHRT, rate);
         }
 
         Disbuff.pushSprite (0, 0);
@@ -149,13 +163,41 @@ void loop () {
         int httpCode = client.GET ();
         if (httpCode == 200) {
             String payload = client.getString ();
-            log_printf ("\n%s\n", payload.c_str ());
+            DEBUG_INFO (TAG, "%s", payload.c_str ());
             temp = payload.substring (payload.indexOf ("\"temp\":") + 7, payload.indexOf (",\"feels_like\"")).toFloat();
-            log_printf ("\nTemperatura: %f\n", temp);
+            DEBUG_INFO (TAG, "Temperatura: %f", temp);
         } else {
-            log_printf ("\nError: %d %s\n", httpCode, client.errorToString (httpCode).c_str ());
+            DEBUG_ERROR (TAG, "Error: %d %s", httpCode, client.errorToString (httpCode).c_str ());
             temp = -200;
         }
     }
-    
+
+    static time_t lastBTCupdate = 0;
+    const time_t btcPeriod = 1000 * 60 / 51;
+    if (millis () - lastBTCupdate > btcPeriod) {
+        lastBTCupdate = millis ();
+        HTTPClient client;
+        client.begin ("https://api.coingecko.com/api/v3/simple/price?ids=" + COIN + "&vs_currencies=" + FIAT);
+        int httpCode = client.GET ();
+        if (httpCode == 200) {
+            String payload = client.getString ();
+            DEBUG_INFO (TAG, "%s", payload.c_str ());
+            payload = payload.substring (payload.indexOf ("\"" + FIAT + "\":"));
+            DEBUG_INFO (TAG, "%s", payload.c_str ());
+            rate = payload.substring (payload.indexOf (":") + 1, payload.indexOf ("}")).toFloat ();
+            DEBUG_INFO (TAG, "%s: %f", COINSHRT, rate);
+        } else {
+            DEBUG_ERROR (TAG, "Error: %d %s", httpCode, client.errorToString (httpCode).c_str ());
+            rate = 0;
+        }
+    }
+
+    static time_t lastTickerChange = 0;
+    const time_t tickerPeriod = 1000 * 5;
+
+    if (millis() - lastTickerChange > tickerPeriod) {
+        lastTickerChange = millis();
+        ticker = !ticker;
+    }
+
 }
