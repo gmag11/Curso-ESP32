@@ -27,6 +27,7 @@ TFT_eSprite Disbuff = TFT_eSprite (&M5.Lcd);
 float temp = -200;
 float hum = -1;
 float pressure = 0;
+float altitude = -1000;
 
 float rate = 0;
 
@@ -34,6 +35,7 @@ typedef enum ticker_state {
     TEMPERATURA,
     HUMEDAD,
     PRESION,
+    ALTITUD
 } ticker_state_t;
 
 ticker_state_t ticker = TEMPERATURA;
@@ -46,6 +48,7 @@ QMP6988 qmp6988;
 FilterClass tempFilter (MEDIAN_FILTER, 21);
 FilterClass humFilter (MEDIAN_FILTER, 21);
 FilterClass pressureFilter (MEDIAN_FILTER, 21);
+FilterClass altitudeFilter (MEDIAN_FILTER, 21);
 
 void updateDisplay (void* pvParameters) {
     RTC_TimeTypeDef sTime;
@@ -101,11 +104,22 @@ void updateDisplay (void* pvParameters) {
                 Disbuff.printf ("H:--.-- %%");
             }
             break;
+        case ALTITUD:
+            Disbuff.setTextSize (4);
+            if (pressure > -1000) {
+                Disbuff.setTextColor (GREEN);
+                Disbuff.printf ("P:%.1f m", altitude);
+            } else {
+                Disbuff.setTextColor (RED);
+                Disbuff.printf ("P:--.-- m");
+            }
+            break;
+
         default:
             Disbuff.setTextSize (3);
             if (pressure > 0) {
                 Disbuff.setTextColor (GREEN);
-                Disbuff.printf ("P:%.0f hPa", pressure);
+                Disbuff.printf ("P:%.0f hPa", pressure/100);
             } else {
                 Disbuff.setTextColor (RED);
                 Disbuff.printf ("P:----- hPa");
@@ -191,7 +205,9 @@ void loop () {
 
     if (millis () - lastSensorUpdate > sensorPeriod) {
         lastSensorUpdate = millis ();
-        pressure = pressureFilter.addValue(qmp6988.calcPressure ());
+        pressure = pressureFilter.addValue (qmp6988.calcPressure ());
+        altitude = altitudeFilter.addValue (qmp6988.calcAltitude (pressure, temp));
+        DEBUG_INFO ("MAIN", "Alt; %.2f m", altitude);
         if (sht30.get () == 0) {
             temp = tempFilter.addValue(sht30.cTemp);
             hum = humFilter.addValue(sht30.humidity);
@@ -199,7 +215,7 @@ void loop () {
             temp = -200;
             hum = -1;
         }
-        DEBUG_INFO (TAG, "T:%.2f C H:%.2f %% P:%.0f hPa", temp, hum, pressure);
+        DEBUG_INFO (TAG, "T:%.2f C H:%.2f %% P:%.2f hPa", temp, hum, pressure/100);
     }
 
     static time_t lastTickerChange = 0;
@@ -207,7 +223,7 @@ void loop () {
 
     if (millis () - lastTickerChange > tickerPeriod) {
         lastTickerChange = millis ();
-        ticker = (ticker_state_t)((ticker + 1) % 3);
+        ticker = (ticker_state_t)((ticker + 1) % 4);
     }
 
 }
