@@ -1,0 +1,25 @@
+{
+  "name": "Libreria de ejemplo",
+  "frameworks": "arduino",
+  "version": "1.0.0",
+  "keywords": "libreria, ejemplo",
+  "platforms": ["espressif32"],
+  "description": "Librería de ejemplo para el curso de ESP32 en la Universidad de León",
+  "url": "https://github.com/gmag11/LibreriaEjemplo",
+  "authors":
+    {
+      "name": "Germán Martín",
+      "email": "github@gmartin.net"
+    },
+  "repository":
+    {
+      "type": "git",
+      "url": "https://github.com/gmag11/LibreriaEjemplo.git"
+    },
+  "examples": "examples/*/*.ino",
+  "dependecies": {
+    "gmag11/QuickDebug": "*",
+    "bblanchon/ArduinoJson": "*"
+  }
+}
+
