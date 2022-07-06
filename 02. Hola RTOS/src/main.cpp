@@ -19,8 +19,9 @@ void parpadeaLED (void* pvParameters) {
 
 void escribeMensaje (void* pvParameters) {
     for (;;) {
-        sendMessage = true;
-        delay (esperaMensaje);
+        Serial.printf ("Hola mundo: %d\n", counter);
+        counter++;
+        vTaskDelay (pdMS_TO_TICKS(esperaMensaje));
     }
 }
 
@@ -32,9 +33,4 @@ void setup () {
 }
 
 void loop () {
-    if (sendMessage) {
-        sendMessage = false;
-        Serial.printf ("Hola mundo: %d\n", counter);
-        counter++;
-    }
 }
