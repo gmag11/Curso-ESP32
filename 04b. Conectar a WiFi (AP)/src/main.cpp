@@ -105,12 +105,14 @@ void newStationGotIP (arduino_event_t* event) {
     }
 }
 
+const int CHANNEL = 11;
+
 void setup () {
     Serial.begin (115200);
     pinMode (LED, OUTPUT);
     digitalWrite (LED, !LED_ON);
     WiFi.mode (WIFI_AP);
-    WiFi.softAP (SSID, PASSWORD, 11);
+    WiFi.softAP (SSID, PASSWORD, CHANNEL);
     WiFi.onEvent (newStationConnected, ARDUINO_EVENT_WIFI_AP_STACONNECTED);
     WiFi.onEvent (newStationGotIP, ARDUINO_EVENT_WIFI_AP_STAIPASSIGNED);
 
