@@ -163,7 +163,7 @@ void setup () {
     setenv ("TZ", PSTR ("CET-1CEST,M3.5.0,M10.5.0/3"), 1);
     tzset ();
     NTP.onNTPSyncEvent (time_sync_cb);
-    NTP.begin ("192.168.5.120", false);
+    NTP.begin (NTP_SERVER, false);
 
     xTaskCreate (escribeMensaje, "Mensaje", 2048, NULL, 1, &tareaMensaje);
 
