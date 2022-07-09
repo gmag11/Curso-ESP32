@@ -17,9 +17,6 @@ constexpr auto frametimeLED = 1000 / framerateLED;
 constexpr auto periodoDisplay = 10;
 constexpr auto framerateDisplay = 15;
 constexpr auto frametimeDisplay = 1000 / framerateDisplay;
-/*
-    El LED se enciende durante 10 ms dos veces, con otros 10 ms de espera entre cada uno. Se repite cada 1 segundo
-*/
 
 TFT_eSprite Disbuff = TFT_eSprite (&M5.Lcd);
 
