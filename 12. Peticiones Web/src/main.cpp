@@ -154,7 +154,7 @@ void setup () {
 void loop () {
     static time_t lastWeatherUpdate = -290000;
     const time_t wuperiod = 1000 * 60 * 5;
-    const String POBLACION = "Madrid";
+    const String POBLACION = "Cubillos del Sil";
 
     if (millis () - lastWeatherUpdate > wuperiod) {
         lastWeatherUpdate = millis ();
