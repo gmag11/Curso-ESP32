@@ -8,7 +8,6 @@
 #include "webServer.h"
 #include "configStorage.h"
 #include "display.h"
-#include "timeSync.h"
 #include <QuickEspNow.h>
 #include <ArduinoJson.h>
 
@@ -64,12 +63,11 @@ void setup () {
         DEBUG_INFO (TAG_MAIN, "Configuracion no leida de flash");
     }
     WiFi.mode (WIFI_STA);
-    WiFi.begin (SSID, PASSWORD);
-
+    WiFi.disconnect ();
+    
     M5.begin ();
     
     initDisplay ();
-    initTimeSync ();
     quickEspNow.onDataRcvd (dataRx_cb);
     quickEspNow.onDataSent (dataTx_cb);
     quickEspNow.begin ();
@@ -85,7 +83,7 @@ void loop () {
         doc["led"] = ledOn;
         String jsonStr;
         serializeJson (doc, jsonStr);
-
+        DEBUG_INFO (TAG_MAIN, "Data: " ARDUHAL_LOG_COLOR(ARDUHAL_LOG_COLOR_YELLOW) "%s", jsonStr.c_str());
         if (quickEspNow.send (ESPNOW_BROADCAST_ADDRESS, (const uint8_t*)jsonStr.c_str (), jsonStr.length ())) {
             DEBUG_ERROR (TAG_MAIN, "Mensaje no enviado");
         } else {
