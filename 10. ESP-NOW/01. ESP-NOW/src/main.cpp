@@ -1,6 +1,6 @@
 #include <Arduino.h>
 #include <WiFi.h>
-#include <LittleFS.h>
+//#include <LittleFS.h>
 #include <QuickDebug.h>
 
 #include <M5StickCPlus.h>
@@ -57,11 +57,8 @@ void setup () {
     Serial.begin (115200);
     pinMode (LED, OUTPUT);
     digitalWrite (LED, !LED_ON);
-    if (!LittleFS.begin ()) {
-        DEBUG_INFO (TAG_MAIN, "LittleFS Mount Failed");
-        return;
-    }
-    if (readConfigFromFlash ()){
+    beginStorage ();
+    if (readConfigFromFlash ()) {
         DEBUG_INFO (TAG_MAIN, "Configuracion leida de flash");
     } else {
         DEBUG_INFO (TAG_MAIN, "Configuracion no leida de flash");

@@ -2,11 +2,12 @@
 #define CONFIG_H
 
 #include <Arduino.h>
-#include <LittleFS.h>
+//#include <LittleFS.h>
 
 const int LED = 10;
 const int LED_ON = LOW;
 
+void beginStorage ();
 bool readConfigFromFlash ();
 bool saveConfigToFlash ();
 
