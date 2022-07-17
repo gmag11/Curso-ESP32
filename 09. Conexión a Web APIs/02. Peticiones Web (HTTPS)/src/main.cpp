@@ -11,8 +11,7 @@
 #else
 constexpr auto SSID = "SSID";
 constexpr auto PASSWORD = "PASSWORD";
-constexpr auto MQTT_SERVER = "time.gmprojects.pro";
-
+constexpr auto NTP_SERVER = "time.gmprojects.pro";
 #endif
 
 // constexpr auto LED = 5;
