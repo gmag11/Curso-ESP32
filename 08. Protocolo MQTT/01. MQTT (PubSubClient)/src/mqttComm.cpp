@@ -9,7 +9,7 @@
 #if __has_include("wificonfig.h")
 #include "wificonfig.h"
 #else
-constexpr auto MQTT_SERVER = "test.mosquitto.org8";
+constexpr auto MQTT_SERVER = "test.mosquitto.org";
 #endif
 
 static const char* MQTT_TAG = "MQTT";
