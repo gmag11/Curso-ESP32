@@ -9,6 +9,7 @@
 #else
 constexpr auto SSID = "SSID";
 constexpr auto PASSWORD = "PASSWORD";
+constexpr auto NTP_SERVER = "time.cloudflare.com";
 #endif
 
 constexpr auto LED = 10;
@@ -116,8 +117,18 @@ void time_sync_cb (timeval* ntptime) {
     timeSyncd = true;
 }
 
+void ledon (AsyncWebServerRequest* request) {
+    digitalWrite (LED, LED_ON);
+    ledOn = true;
+    time_t now = time (NULL);
+    String response = ctime (&now);
+    response.trim ();
+    response += ": LED ON";
+    request->send (200, "text/plain", response);
+}
+
 void setup () {
-    Serial.begin (9600);
+    Serial.begin (115200);
     pinMode (LED, OUTPUT);
     digitalWrite (LED, !LED_ON);
     WiFi.mode (WIFI_STA);
@@ -137,7 +148,7 @@ void setup () {
 
     sntp_setoperatingmode (SNTP_OPMODE_POLL);
     sntp_set_sync_mode (SNTP_SYNC_MODE_SMOOTH);
-    sntp_setservername (0, "192.168.5.120");
+    sntp_setservername (0, NTP_SERVER);
     setenv ("TZ", PSTR ("CET-1CEST,M3.5.0,M10.5.0/3"), 1);
     tzset ();
     sntp_set_time_sync_notification_cb (time_sync_cb);
@@ -150,15 +161,8 @@ void setup () {
     tareaDisplay = xTimerCreate ("Display", pdMS_TO_TICKS (1000 / fps), pdTRUE, NULL, updateDisplay);
     xTimerStart (tareaDisplay, 0);
     
-    server.on ("/ledon", HTTP_GET, [] (AsyncWebServerRequest* request) {
-        digitalWrite (LED, LED_ON);
-        ledOn = true;
-        time_t now = time (NULL);
-        String response = ctime (&now);
-        response.trim ();
-        response += ": LED ON";
-        request->send (200, "text/plain", response);
-               });
+    server.on ("/ledon", HTTP_GET, ledon);
+    
     server.on ("/ledoff", HTTP_GET, [] (AsyncWebServerRequest* request) {
         digitalWrite (LED, !LED_ON);
         ledOn = false;

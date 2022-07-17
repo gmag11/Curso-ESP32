@@ -2,10 +2,15 @@
 #include "wificonfig.h"
 #include <QuickDebug.h>
 #include "mqtt_client.h"
+#if __has_include("wificonfig.h")
+#include "wificonfig.h"
+#else
+constexpr auto MQTT_SERVER = "time.cloudflare.com";
+#endif
 
 static const char* MQTT_TAG = "MQTT";
 
-const char* mqtt_server = "192.168.5.120";
+const char* mqtt_server = MQTT_SERVER;
 const char* ledTopic = "led/set";
 const char* ledStateTopic = "led/state";
 const char* buttonTopic = "led/set";
@@ -93,12 +98,14 @@ static void mqtt_event_handler (void* handler_args, esp_event_base_t base, int32
 
 void initMqttComm () {
     DEBUG_INFO (MQTT_TAG, "initMqttComm");
-    
+
     String brokerURL = "mqtt://";
-    brokerURL += MQTT_USER;
-    brokerURL += ":";
-    brokerURL += MQTT_PASSWORD;
-    brokerURL += "@";
+    if (!MQTT_USER && !MQTT_PASSWORD) {
+        brokerURL += MQTT_USER;
+        brokerURL += ":";
+        brokerURL += MQTT_PASSWORD;
+        brokerURL += "@";
+    }
     brokerURL += mqtt_server;
 
     DEBUG_INFO (MQTT_TAG, "Server: %s", brokerURL.c_str ());
@@ -108,7 +115,7 @@ void initMqttComm () {
     clientId_conn += String ((int32_t)(ESP.getEfuseMac () >> 32), HEX);
 
     DEBUG_INFO (MQTT_TAG, "Server: %s clientId: %s", brokerURL.c_str (), clientId_conn.c_str ());
-    
+
     esp_mqtt_client_config_t mqtt_cfg = {
         .uri = brokerURL.c_str (),
         .client_id = clientId_conn.c_str (),

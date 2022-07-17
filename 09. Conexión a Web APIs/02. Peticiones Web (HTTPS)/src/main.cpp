@@ -11,6 +11,8 @@
 #else
 constexpr auto SSID = "SSID";
 constexpr auto PASSWORD = "PASSWORD";
+constexpr auto MQTT_SERVER = "time.gmprojects.pro";
+
 #endif
 
 // constexpr auto LED = 5;
@@ -164,7 +166,7 @@ void setup () {
 
     sntp_setoperatingmode (SNTP_OPMODE_POLL);
     sntp_set_sync_mode (SNTP_SYNC_MODE_SMOOTH);
-    sntp_setservername (0, "192.168.5.120");
+    sntp_setservername (0, NTP_SERVER);
     setenv ("TZ", PSTR ("CET-1CEST,M3.5.0,M10.5.0/3"), 1);
     tzset ();
     sntp_set_time_sync_notification_cb (time_sync_cb);

@@ -6,9 +6,15 @@
 #include "esp_log.h"
 #include "esp32-hal-log.h"
 
+#if __has_include("wificonfig.h")
+#include "wificonfig.h"
+#else
+constexpr auto MQTT_SERVER = "test.mosquitto.org8";
+#endif
+
 static const char* MQTT_TAG = "MQTT";
 
-const char* mqtt_server = "192.168.5.120";
+const char* mqtt_server = MQTT_SERVER;
 const char* ledTopic = "led/set";
 const char* ledStateTopic = "led/state";
 const char* buttonTopic = "led/set";
@@ -20,7 +26,7 @@ extern bool ledChanged;
 extern bool ledOn;
 
 void callback (char* topic, byte* payload, unsigned int length) {
-    DEBUG_INFO (MQTT_TAG, "Message arrived: %s : [% .*s] \n", topic, length, payload);
+    DEBUG_INFO (MQTT_TAG, "Message arrived: %s : [% .*s]", topic, length, payload);
 
     if (!strcmp (topic, ledTopic) && length == 1) {
         if (payload[0] == '1') {

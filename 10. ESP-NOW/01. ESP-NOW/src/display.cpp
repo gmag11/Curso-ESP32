@@ -67,9 +67,10 @@ void updateDisplay (void* pvParameters) {
         Disbuff.printf ("%.2f V %.2f mA", voltage, current);
         Disbuff.setCursor (10, 75);
         Disbuff.setTextColor (WHITE);
-        Disbuff.printf ("%s", ssid.c_str ());
+        Disbuff.setTextSize (2);
+        Disbuff.printf ("S %s", WiFi.macAddress ().c_str ());
         Disbuff.setCursor (10, 100);
-        Disbuff.printf ("IP: %s", localip.c_str ());
+        Disbuff.printf ("A %s", WiFi.softAPmacAddress ().c_str ());
         Disbuff.pushSprite (0, 0);
     }
     //----------------------------------------------------------------------------------

@@ -11,9 +11,9 @@ bool sendMessage = false;
 void parpadeaLED (void* pvParameters) {
     for (;;)   {
         digitalWrite (BUILTIN_LED, HIGH);
-        delay (esperaLED);
+        vTaskDelay (pdMS_TO_TICKS (esperaLED));
         digitalWrite (BUILTIN_LED, LOW);
-        delay (esperaLED);
+        vTaskDelay (pdMS_TO_TICKS (esperaLED));
     }
 }
 
@@ -28,8 +28,8 @@ void escribeMensaje (void* pvParameters) {
 void setup () {
     Serial.begin (115200);
     pinMode (BUILTIN_LED, OUTPUT);
-    xTaskCreate (parpadeaLED, "LED", configMINIMAL_STACK_SIZE, NULL, 1, &tareaLED);
-    xTaskCreate (escribeMensaje, "Mensaje", configMINIMAL_STACK_SIZE, NULL, 1, &tareaMensaje);
+    xTaskCreate (parpadeaLED, "LED", 2048, NULL, 1, &tareaLED);
+    xTaskCreate (escribeMensaje, "Mensaje", 2048, NULL, 1, &tareaMensaje);
 }
 
 void loop () {

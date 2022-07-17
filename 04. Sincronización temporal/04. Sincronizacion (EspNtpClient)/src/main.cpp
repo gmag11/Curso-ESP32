@@ -8,6 +8,7 @@
 #else
 constexpr auto SSID = "SSID";
 constexpr auto PASSWORD = "PASSWORD";
+constexpr auto NTP_SERVER = "time.cloudflare.com";
 #endif
 
 // constexpr auto LED = 5;
