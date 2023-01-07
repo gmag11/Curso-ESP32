@@ -2,7 +2,6 @@
 //#include <M5StickCPlus.h>
 #include <I2C_AXP192.h>
 #include <TFT_eSPI.h>
-#include "driver/ledc.h"
 
 constexpr auto LED = 10;
 
@@ -10,12 +9,10 @@ constexpr auto LED = 10;
 TaskHandle_t tareaLED = NULL;
 TimerHandle_t tareaDisplay = NULL;
 
-constexpr int LEDC_BASE_FREQ = 5000;
-constexpr int LEDC_RESOLUTION = LEDC_TIMER_8_BIT;
-
 constexpr auto periodoDisplay = 10;
 constexpr auto framerateDisplay = 25;
 constexpr auto frametimeDisplay = 1000 / framerateDisplay;
+
 /*
     El LED se enciende durante 10 ms dos veces, con otros 10 ms de espera entre cada uno. Se repite cada 1 segundo
 */

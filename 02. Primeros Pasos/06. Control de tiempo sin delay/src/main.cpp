@@ -2,16 +2,12 @@
 //#include <M5StickCPlus.h>
 #include <I2C_AXP192.h>
 #include <TFT_eSPI.h>
-#include "driver/ledc.h"
 
 constexpr auto LED = 10;
 
 //TaskHandle_t tareaLED = NULL;
 TimerHandle_t tareaLED = NULL;
 TimerHandle_t tareaDisplay = NULL;
-
-constexpr int LEDC_BASE_FREQ = 5000;
-constexpr int LEDC_RESOLUTION = LEDC_TIMER_8_BIT;
 
 constexpr auto periodoLED = 1000;
 constexpr auto ledEncendido = 50; // ms
