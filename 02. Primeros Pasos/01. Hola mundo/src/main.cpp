@@ -1,5 +1,7 @@
 #include <Arduino.h>
 
+#define BUILTIN_LED 10
+
 void setup () {
     Serial.begin(9600);
     pinMode (BUILTIN_LED, OUTPUT);
