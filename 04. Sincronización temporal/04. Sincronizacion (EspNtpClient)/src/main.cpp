@@ -1,7 +1,10 @@
 #include <Arduino.h>
 #include <WiFi.h>
 #include <ESPNtpClient.h>
-#include <M5StickCPlus.h>
+//#include <M5StickCPlus.h>
+#include <I2C_AXP192.h>
+#include <TFT_eSPI.h>
+#include <I2C_BM8563.h>
 
 #if __has_include("wificonfig.h")
 #include "wificonfig.h"
@@ -19,11 +22,14 @@ TaskHandle_t tareaLED = NULL;
 TaskHandle_t tareaMensaje = NULL;
 TimerHandle_t tareaDisplay = NULL;
 
-TFT_eSprite Disbuff = TFT_eSprite (&M5.Lcd);
+I2C_AXP192 axp192 (I2C_AXP192_DEFAULT_ADDRESS, Wire1);
+I2C_BM8563 rtc = I2C_BM8563 (I2C_BM8563_DEFAULT_ADDRESS, Wire1);
+TFT_eSPI lcd = TFT_eSPI ();
 
+TFT_eSprite Disbuff = TFT_eSprite (&lcd);
 
 void updateDisplay (void* pvParameters) {
-    RTC_TimeTypeDef sTime;
+    I2C_BM8563_TimeTypeDef sTime;
     constexpr auto periodoDisplay = 10;
 
     static time_t lastDisplayUpdate = 0;
@@ -33,10 +39,13 @@ void updateDisplay (void* pvParameters) {
     static String ssid;
     static String localip;
 
-    if (millis () - lastMeasurement > 1000) {
+    if (millis () - lastMeasurement >= 1000) {
         lastMeasurement = millis ();
-        current = M5.Axp.GetBatCurrent ();
-        voltage = M5.Axp.GetBatVoltage ();
+        current = axp192.getBatteryDischargeCurrent ();
+        if (current <= 0.01) {
+            current = -axp192.getBatteryChargeCurrent ();
+        }
+        voltage = axp192.getBatteryVoltage ();
         ssid = WiFi.SSID ();
         localip = WiFi.localIP ().toString ();
     }
@@ -44,18 +53,26 @@ void updateDisplay (void* pvParameters) {
         //--------------------- Procesado visual -------------------------------------------
     if (millis () - lastDisplayUpdate >= periodoDisplay) {
         lastDisplayUpdate = millis ();
-        Disbuff.fillSprite (BLACK);
+        Disbuff.fillSprite (TFT_BLACK);
         Disbuff.setCursor (10, 10);
-        Disbuff.setTextColor (WHITE);
         Disbuff.setTextSize (4);
-        M5.Rtc.GetTime (&sTime);
-        Disbuff.printf ("%02d:%02d:%02d", sTime.Hours, sTime.Minutes, sTime.Seconds);
+        NTPStatus_t status = NTP.syncStatus ();
+        tm timeInfo;
+        if (status == syncd || status == partialSync) {
+            getLocalTime (&timeInfo);
+            Disbuff.setTextColor (TFT_GREEN);
+            Disbuff.printf ("%02d:%02d:%02d", timeInfo.tm_hour, timeInfo.tm_min, timeInfo.tm_sec);
+        } else {
+            rtc.getTime (&sTime);
+            Disbuff.setTextColor (TFT_WHITE);
+            Disbuff.printf ("%02d:%02d:%02d", sTime.hours, sTime.minutes, sTime.seconds);
+        }
         Disbuff.setCursor (10, 50);
         Disbuff.setTextSize (2);
-        Disbuff.setTextColor (RED);
+        Disbuff.setTextColor (TFT_RED);
         Disbuff.printf ("%.2f V %.2f mA", voltage, current);
         Disbuff.setCursor (10, 75);
-        Disbuff.setTextColor (WHITE);
+        Disbuff.setTextColor (TFT_WHITE);
         Disbuff.printf ("%s", ssid.c_str ());
         Disbuff.setCursor (10, 100);
         Disbuff.printf ("IP: %s", localip.c_str ());
@@ -68,7 +85,7 @@ void parpadeaLED (void* pvParameters) {
     const int letFlashes = 2;
     const int ledONtime = 40;
     const int ledOFFtime = 100;
-    const int ledCyclePeriod = 1000;
+    const int ledCyclePeriod = 5000;
 
 
     for (;;) {
@@ -77,18 +94,22 @@ void parpadeaLED (void* pvParameters) {
 
         struct timeval tv_now;
         gettimeofday (&tv_now, NULL);
-        time_t time_ms = tv_now.tv_sec * 1000L + tv_now.tv_usec / 1000L;
+
+        uint64_t seconds_ms = (uint64_t)(tv_now.tv_sec) * 1000L;
+        uint32_t useconds_ms = tv_now.tv_usec / 1000L;
+        uint64_t time_ms = seconds_ms + (uint64_t)useconds_ms;
 
         NTPStatus_t status = NTP.syncStatus ();
-        if (status == syncd || status == partlySync) {
-            ciclo = time_ms % ledCyclePeriod;;
+        if ((status == syncd) || (status == partialSync)) {
+            ciclo = (uint64_t)time_ms % (uint64_t)ledCyclePeriod;
         } else {
             ciclo = millis () % ledCyclePeriod;
         }
         
-        if ((!flashed) && (ciclo >= 0 && ciclo < (ledONtime + ledOFFtime)*letFlashes)) {
+        if ((!flashed) && (ciclo >= 0 && ciclo <= (ledONtime + ledOFFtime)*letFlashes)) {
             flashed = true;
             for (int i = 0; i < letFlashes; i++) {
+                log_printf ("Flashing ciclo: %d sec: %lu\n", ciclo, tv_now.tv_sec);
                 digitalWrite (LED, LED_ON);
                 delay (ledONtime);
                 digitalWrite (LED, !LED_ON);
@@ -96,7 +117,7 @@ void parpadeaLED (void* pvParameters) {
             }
         }
 
-        if (flashed && (ciclo > (ledONtime + ledOFFtime) * letFlashes)) {
+        if (flashed && (ciclo >= (ledONtime + ledOFFtime) * letFlashes)) {
             flashed = false;
         }
         delay (1);
@@ -122,22 +143,21 @@ void time_sync_cb (NTPEvent_t event) {
         time_t hora_actual = time (NULL);
 
         tm* timeinfo = localtime (&hora_actual);
-        RTC_DateTypeDef sDate;
-        RTC_TimeTypeDef sTime;
+        I2C_BM8563_DateTypeDef sDate;
+        I2C_BM8563_TimeTypeDef sTime;
 
-        sTime.Hours = timeinfo->tm_hour;
-        sTime.Minutes = timeinfo->tm_min;
-        sTime.Seconds = timeinfo->tm_sec;
+        sTime.hours = timeinfo->tm_hour;
+        sTime.minutes = timeinfo->tm_min;
+        sTime.seconds = timeinfo->tm_sec;
 
-        M5.Rtc.SetTime (&sTime);
+        rtc.setTime (&sTime);
 
-        sDate.WeekDay = timeinfo->tm_wday;
-        sDate.Month = timeinfo->tm_mon + 1;
-        sDate.Date = timeinfo->tm_mday;
-        sDate.Year = timeinfo->tm_year + 1900;
+        sDate.weekDay = timeinfo->tm_wday;
+        sDate.month = timeinfo->tm_mon + 1;
+        sDate.date = timeinfo->tm_mday;
+        sDate.year = timeinfo->tm_year + 1900;
 
-        M5.Rtc.SetData (&sDate);
-
+        rtc.setDate (&sDate);
     }
 }
 
@@ -145,16 +165,36 @@ void setup () {
     Serial.begin (115200);
     pinMode (LED, OUTPUT);
     digitalWrite (LED, !LED_ON);
+    rtc.begin ();
 
     WiFi.mode (WIFI_STA);
     WiFi.begin (SSID, PASSWORD);
 
-    M5.begin ();
-    M5.Lcd.setRotation (3);
-    Disbuff.createSprite (240, 135);
-    Disbuff.setRotation (3);
-    Disbuff.fillSprite (BLACK);
-    Disbuff.setTextColor (WHITE);
+    Wire1.begin (21, 22);
+    Wire1.setClock (400000);
+
+    I2C_AXP192_InitDef initDef = {
+        .EXTEN = true,
+        .BACKUP = true,
+        .DCDC1 = 3300,
+        .DCDC2 = 0,
+        .DCDC3 = 0,
+        .LDO2 = 2800,
+        .LDO3 = 3000,
+        .GPIO0 = 2800,
+        .GPIO1 = -1,
+        .GPIO2 = -1,
+        .GPIO3 = -1,
+        .GPIO4 = -1,
+    };
+    axp192.begin (initDef);
+    lcd.init ();
+    lcd.setRotation (1);
+    lcd.fillScreen (TFT_BLACK);
+    Disbuff.createSprite (TFT_HEIGHT, TFT_WIDTH);
+    Disbuff.setRotation (1);
+    Disbuff.fillSprite (TFT_BLACK);
+    Disbuff.setTextColor (TFT_WHITE);
     Disbuff.setTextSize (2);
     Disbuff.setCursor (10, 10);
     Disbuff.printf ("Conectando");
@@ -170,7 +210,7 @@ void setup () {
 
     xTaskCreate (parpadeaLED, "LED", 2048, NULL, 1, &tareaLED);
 
-    const uint fps = 10;
+    const uint fps = 25;
 
     tareaDisplay = xTimerCreate ("Display", pdMS_TO_TICKS(1000/fps), pdTRUE, NULL, updateDisplay);
     xTimerStart (tareaDisplay, 0);
