@@ -13,13 +13,13 @@ void showDebug () {
     DEBUG_WARN (TAG, "Warning message");
     DEBUG_INFO (TAG, "Info message");
     DEBUG_DBG (TAG, "Debug message");
-    DEBUG_VERBOSE (TAG, ARDUHAL_LOG_COLOR (ARDUHAL_LOG_COLOR_MAGENTA) "Verbose message");
+    DEBUG_VERBOSE (TAG, "Verbose message");
     Serial.println ();
     DEBUG_ERROR (TAG2, "Error message");
     DEBUG_WARN (TAG2, "Warning message");
     DEBUG_INFO (TAG2, "Info message");
     DEBUG_DBG (TAG2, "Debug message");
-    DEBUG_VERBOSE (TAG2, ARDUHAL_LOG_COLOR (ARDUHAL_LOG_COLOR_MAGENTA) "Verbose message");
+    DEBUG_VERBOSE (TAG2, "Verbose message");
     Serial.println ();
     setTagToDefaultDebugLevel (TAG);
     DEBUG_ERROR (TAG, "Error message");
@@ -34,7 +34,10 @@ void showDebug () {
     LOG_IF_CODE (ERROR, TAG, giveNumber (-2), -2, "Error message if code");
     Serial.println ();
     setTagDebugLevel (TAG, INFO);
-    Serial.printf ("debug levels: %s:%d:%s %s:%d:%s\n", TAG, getTagDebugLevel (TAG), getTagDebugLevelStr (TAG).c_str (), TAG2, getTagDebugLevel (TAG2), getTagDebugLevelStr (TAG2).c_str ());
+    Serial.printf ("debug levels: %s:%d:%s %s:%d:%s\n",
+                   TAG, getTagDebugLevel (TAG), getTagDebugLevelStr (TAG).c_str (),
+                   TAG2, getTagDebugLevel (TAG2), getTagDebugLevelStr (TAG2).c_str ()
+    );
 }
 
 void task2 (void* param) {
@@ -64,7 +67,7 @@ int* a;
 
 void loop () {
     delay (2000);
-    a = (int*)malloc (10 * sizeof (int)); // This will cause heap to be reduced
+    a = (int*)malloc (1000 * sizeof (int)); // This will cause heap to be reduced
     DEBUG_INFO (TAG, "Pointer: %p", a); // You will see heap size reducing if memory is not freed [H: xxxxx]
     // free (a); // Memory is not freed if this line is commented out
 }

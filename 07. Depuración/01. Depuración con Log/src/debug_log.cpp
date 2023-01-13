@@ -14,7 +14,7 @@ void showDebug () {
     ESP_LOGW (TAG, "Warning message");
     ESP_LOGI (TAG, "Info message");
     ESP_LOGD (TAG, "Debug message");
-    ESP_LOGV (TAG, ARDUHAL_LOG_COLOR (ARDUHAL_LOG_COLOR_MAGENTA) "Verbose message");
+    ESP_LOGV (TAG, "Verbose message");
     Serial.println ();
     ESP_LOGE (TAG2, "Error message");
     ESP_LOGW (TAG2, "Warning message");

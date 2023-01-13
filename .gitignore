@@ -5,3 +5,4 @@ lib
 test
 build
 wificonfig.h
+.gitignore

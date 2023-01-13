@@ -13,7 +13,7 @@ void showDebug () {
     DEBUG_WARN (TAG, "Warning message");
     DEBUG_INFO (TAG, "Info message");
     DEBUG_DBG (TAG, "Debug message");
-    DEBUG_VERBOSE (TAG, ARDUHAL_LOG_COLOR (ARDUHAL_LOG_COLOR_MAGENTA) "Verbose message");
+    DEBUG_VERBOSE (TAG, "Verbose message");
     Serial.println ();
     DEBUG_ERROR (TAG2, "Error message");
     DEBUG_WARN (TAG2, "Warning message");
@@ -34,7 +34,9 @@ void showDebug () {
     LOG_IF_CODE (ERROR, TAG, giveNumber (-2), -2, "Error message if code is -2");
     Serial.println ();
     setTagDebugLevel (TAG, INFO);
-    Serial.printf ("debug levels: %s:%d:%s %s:%d:%s\n", TAG, getTagDebugLevel (TAG), getTagDebugLevelStr (TAG).c_str (), TAG2, getTagDebugLevel (TAG2), getTagDebugLevelStr (TAG2).c_str ());
+    Serial.printf ("debug levels: %s:%d:%s %s:%d:%s\n",
+                   TAG, getTagDebugLevel (TAG), getTagDebugLevelStr (TAG).c_str (),
+                   TAG2, getTagDebugLevel (TAG2), getTagDebugLevelStr (TAG2).c_str ());
 }
 
 void setup () {
