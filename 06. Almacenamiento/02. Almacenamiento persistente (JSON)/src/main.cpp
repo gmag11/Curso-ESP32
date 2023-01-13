@@ -2,9 +2,14 @@
 #include <WiFi.h>
 #include <ESPAsyncWebServer.h>
 #include <AsyncWebSocket.h>
-#include <LittleFS.h>
+//#include <LittleFS.h>
+#include <FFat.h>
 #include <sntp.h>
-#include <M5StickCPlus.h>
+//#include <M5StickCPlus.h>
+#include <I2C_AXP192.h>
+#include <TFT_eSPI.h>
+#include <I2C_BM8563.h>
+#include <JC_Button_ESP.h>
 #include <list>
 #include <ArduinoJson.h>
 
@@ -19,6 +24,7 @@ constexpr auto NTP_SERVER = "time.cloudflare.com";
 constexpr auto LED = 10;
 //constexpr auto LED = 19;
 constexpr auto LED_ON = LOW;
+constexpr auto BUTTON_PIN = 37;
 
 TimerHandle_t tareaDisplay = NULL;
 
@@ -32,16 +38,22 @@ AsyncWebSocket ws ("/ws");
 
 std::list <AsyncWebSocketClient*> clients;
 
-TFT_eSprite Disbuff = TFT_eSprite (&M5.Lcd);
+I2C_AXP192 axp192 (I2C_AXP192_DEFAULT_ADDRESS, Wire1);
+I2C_BM8563 rtc = I2C_BM8563 (I2C_BM8563_DEFAULT_ADDRESS, Wire1);
+TFT_eSPI lcd = TFT_eSPI ();
+
+TFT_eSprite Disbuff = TFT_eSprite (&lcd);
+
+Button BtnA (BUTTON_PIN);
 
 const char* configFileName = "/config.json";
 
 bool readConfigFromFlash () {
-    if (LittleFS.begin ()) {
-        Serial.println ("LittleFS mounted");
-        if (LittleFS.exists (configFileName)) {
+    if (FFat.begin ()) {
+        Serial.println ("FFat mounted");
+        if (FFat.exists (configFileName)) {
             Serial.println ("Config file exists");
-            File configFile = LittleFS.open (configFileName, "r");
+            File configFile = FFat.open (configFileName, "r");
             if (configFile) {
                 Serial.println ("Config file opened");
                 //String line;
@@ -76,14 +88,17 @@ bool readConfigFromFlash () {
 }
 
 bool saveConfigToFlash () {
-    if (LittleFS.begin ()) {
-        Serial.println ("LittleFS mounted");
-        File configFile = LittleFS.open (configFileName, "w", true);
+    if (FFat.begin ()) {
+        Serial.println ("FFat mounted");
+        File configFile = FFat.open (configFileName, "w", true);
         if (configFile) {
             Serial.println ("Config file opened");
             StaticJsonDocument<16> doc;
             doc["led"] = ledOn ? 1 : 0;
             serializeJson (doc, configFile);
+            configFile.close ();
+            configFile = FFat.open (configFileName);
+            Serial.println (configFile.readString ());
             configFile.close ();
             return true;
         }
@@ -92,7 +107,7 @@ bool saveConfigToFlash () {
 }
 
 void updateDisplay (void* pvParameters) {
-    RTC_TimeTypeDef sTime;
+    I2C_BM8563_TimeTypeDef sTime;
     constexpr auto periodoDisplay = 10;
 
     static time_t lastDisplayUpdate = 0;
@@ -104,8 +119,11 @@ void updateDisplay (void* pvParameters) {
 
     if (millis () - lastMeasurement > 1000) {
         lastMeasurement = millis ();
-        current = M5.Axp.GetBatCurrent ();
-        voltage = M5.Axp.GetBatVoltage ();
+        current = axp192.getBatteryDischargeCurrent ();
+        if (current <= 0.01) {
+            current = -axp192.getBatteryChargeCurrent ();
+        }
+        voltage = axp192.getBatteryVoltage ();
         ssid = WiFi.SSID ();
         localip = WiFi.localIP ().toString ();
     }
@@ -114,21 +132,28 @@ void updateDisplay (void* pvParameters) {
     if (millis () - lastDisplayUpdate >= periodoDisplay) {
         lastDisplayUpdate = millis ();
         if (ledOn) {
-            Disbuff.fillSprite (BLUE);
+            Disbuff.fillSprite (TFT_BLUE);
         } else {
-            Disbuff.fillSprite (BLACK);
+            Disbuff.fillSprite (TFT_BLACK);
         }
         Disbuff.setCursor (10, 10);
-        Disbuff.setTextColor (WHITE);
         Disbuff.setTextSize (4);
-        M5.Rtc.GetTime (&sTime);
-        Disbuff.printf ("%02d:%02d:%02d", sTime.Hours, sTime.Minutes, sTime.Seconds);
+        tm timeInfo;
+        if (timeSyncd) {
+            getLocalTime (&timeInfo);
+            Disbuff.setTextColor (TFT_GREEN);
+            Disbuff.printf ("%02d:%02d:%02d", timeInfo.tm_hour, timeInfo.tm_min, timeInfo.tm_sec);
+        } else {
+            rtc.getTime (&sTime);
+            Disbuff.setTextColor (TFT_WHITE);
+            Disbuff.printf ("%02d:%02d:%02d", sTime.hours, sTime.minutes, sTime.seconds);
+        }
         Disbuff.setCursor (10, 50);
         Disbuff.setTextSize (2);
-        Disbuff.setTextColor (RED);
+        Disbuff.setTextColor (TFT_RED);
         Disbuff.printf ("%.2f V %.2f mA", voltage, current);
         Disbuff.setCursor (10, 75);
-        Disbuff.setTextColor (WHITE);
+        Disbuff.setTextColor (TFT_WHITE);
         Disbuff.printf ("%s", ssid.c_str ());
         Disbuff.setCursor (10, 100);
         Disbuff.printf ("IP: %s", localip.c_str ());
@@ -161,12 +186,12 @@ bool handleFileRead (String path, AsyncWebServerRequest* request) {
         path += "index.htm";
     String contentType = getContentType (path, request);
     String pathWithGz = path + ".gz";
-    if (LittleFS.exists (pathWithGz) || LittleFS.exists (path)) {
-        if (LittleFS.exists (pathWithGz)) {
+    if (FFat.exists (path) || FFat.exists (pathWithGz)) {
+        if (FFat.exists (pathWithGz)) {
             path += ".gz";
         }
         log_d ("Content type: %s\r\n", contentType.c_str ());
-        AsyncWebServerResponse* response = request->beginResponse (LittleFS, path, contentType);
+        AsyncWebServerResponse* response = request->beginResponse (FFat, path, contentType);
         if (path.endsWith (".gz"))
             response->addHeader ("Content-Encoding", "gzip");
         //File file = LittleFS.open(path, "r");
@@ -197,21 +222,21 @@ void time_sync_cb (timeval* ntptime) {
     time_t hora_actual = time (NULL);
 
     tm* timeinfo = localtime (&hora_actual);
-    RTC_DateTypeDef sDate;
-    RTC_TimeTypeDef sTime;
+    I2C_BM8563_DateTypeDef sDate;
+    I2C_BM8563_TimeTypeDef sTime;
 
-    sTime.Hours = timeinfo->tm_hour;
-    sTime.Minutes = timeinfo->tm_min;
-    sTime.Seconds = timeinfo->tm_sec;
+    sTime.hours = timeinfo->tm_hour;
+    sTime.minutes = timeinfo->tm_min;
+    sTime.seconds = timeinfo->tm_sec;
 
-    M5.Rtc.SetTime (&sTime);
+    rtc.setTime (&sTime);
 
-    sDate.WeekDay = timeinfo->tm_wday;
-    sDate.Month = timeinfo->tm_mon + 1;
-    sDate.Date = timeinfo->tm_mday;
-    sDate.Year = timeinfo->tm_year + 1900;
+    sDate.weekDay = timeinfo->tm_wday;
+    sDate.month = timeinfo->tm_mon + 1;
+    sDate.date = timeinfo->tm_mday;
+    sDate.year = timeinfo->tm_year + 1900;
 
-    M5.Rtc.SetData (&sDate);
+    rtc.setDate (&sDate);
 
     timeSyncd = true;
 }
@@ -232,8 +257,11 @@ void setup () {
     Serial.begin (115200);
     pinMode (LED, OUTPUT);
     digitalWrite (LED, !LED_ON);
-    if (!LittleFS.begin ()) {
-        Serial.println ("LittleFS Mount Failed");
+    rtc.begin ();
+    BtnA.begin ();
+
+    if (!FFat.begin ()) {
+        Serial.println ("FFat Mount Failed");
         return;
     }
     if (readConfigFromFlash ()){
@@ -244,12 +272,31 @@ void setup () {
     WiFi.mode (WIFI_STA);
     WiFi.begin (SSID, PASSWORD);
 
-    M5.begin ();
-    M5.Lcd.setRotation (3);
-    Disbuff.createSprite (240, 135);
-    Disbuff.setRotation (3);
-    Disbuff.fillSprite (BLACK);
-    Disbuff.setTextColor (WHITE);
+    Wire1.begin (21, 22);
+    Wire1.setClock (400000);
+
+    I2C_AXP192_InitDef initDef = {
+        .EXTEN = true,
+        .BACKUP = true,
+        .DCDC1 = 3300,
+        .DCDC2 = 0,
+        .DCDC3 = 0,
+        .LDO2 = 2800,
+        .LDO3 = 3000,
+        .GPIO0 = 2800,
+        .GPIO1 = -1,
+        .GPIO2 = -1,
+        .GPIO3 = -1,
+        .GPIO4 = -1,
+    };
+    axp192.begin (initDef);
+    lcd.init ();
+    lcd.setRotation (1);
+    lcd.fillScreen (TFT_BLACK);
+    Disbuff.createSprite (TFT_HEIGHT, TFT_WIDTH);
+    Disbuff.setRotation (1);
+    Disbuff.fillSprite (TFT_BLACK);
+    Disbuff.setTextColor (TFT_WHITE);
     Disbuff.setTextSize (2);
     Disbuff.setCursor (10, 10);
     Disbuff.printf ("Conectando");
@@ -321,8 +368,8 @@ void setup () {
 }
 
 void loop () {
-    M5.update ();
-    if (M5.BtnA.wasReleased ()) {
+    BtnA.read ();
+    if (BtnA.wasReleased ()) {
         ledOn = !ledOn;
         ledChanged = true;
         if (saveConfigToFlash ()) {
